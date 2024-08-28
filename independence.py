@@ -1,9 +1,9 @@
 import pandas as pd
 from scipy.stats import chi2_contingency
-from constants import CATEGORICAL_COLUMNS, T, Y
+from constants import CATEGORICAL_COLUMNS, T_CATEGORY, Y
 
 
-def column_distribution(df, column, seperator_col=T):
+def column_distribution(df, column, seperator_col=T_CATEGORY):
     counts = df[[seperator_col, column]].groupby([seperator_col, column]).size()
     percentages = counts.groupby(level=0).apply(lambda x: round(100 * x / float(x.sum()), 2)).copy()
     counts.rename('No.', inplace=True)
@@ -14,7 +14,7 @@ def column_distribution(df, column, seperator_col=T):
     return dist
 
 
-def chi_square_test(df, column, seperator_col=T):
+def chi_square_test(df, column, seperator_col=T_CATEGORY):
     contingency_table = pd.crosstab(df[column], df[seperator_col])
     chi2, p_value = chi2_contingency(contingency_table)[:2]
     res = pd.DataFrame(data=[[round(chi2, 2), p_value]], columns=['Chi Square', 'p value'], index=[column])
@@ -22,7 +22,7 @@ def chi_square_test(df, column, seperator_col=T):
     return res
 
 
-def print_independence_table(df, columns=CATEGORICAL_COLUMNS, seperator_col=T):
+def print_independence_table(df, columns=CATEGORICAL_COLUMNS, seperator_col=T_CATEGORY):
     df_list = []
     chi_list = []
     for column in columns:
