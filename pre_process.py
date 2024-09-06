@@ -65,7 +65,7 @@ def data_processing(data_path: str) -> pd.DataFrame:
     return df
 
 
-def features_engineer(data_path: str) -> pd.DataFrame:
+def features_engineer(data_path: str, winter_filter=False) -> pd.DataFrame:
     df = data_processing(data_path).copy()
     df['is_wet'] = df['road_condition'].apply(lambda x: 1 if x == 'Wet' else 0)
     df['is_drunk_biker'] = df['is_drunk_biker'].apply(lambda x: 1 if x == 'Yes' else 0)
@@ -81,6 +81,8 @@ def features_engineer(data_path: str) -> pd.DataFrame:
     'September': 9, 'October': 10, 'November': 11, 'December': 12
     }
     df['month'] = df['month'].replace(month_mapping)
+    if winter_filter:
+        df = df[df['month'].isin([11, 12, 1, 2])]
     df = df.drop(['road_condition', 'gender'], axis=1)
     category_cols = ['biker_location', 'intersection_type', 'vehicle_type', 'light_condition', 'locality', 'road_surface_type', 'weather']
     df = pd.get_dummies(df, columns=category_cols)

@@ -19,7 +19,7 @@ CATEGORICAL_COLUMNS = \
 
 PROPENSITY_MODEL_FEATURES = \
     ['month',
-    'y', 'x', 'speed_limit', 
+    'speed_limit', 
     'biker_location_Bike Lane / Paved Shoulder',
     'biker_location_Non-Roadway',
     'biker_location_Sidewalk / Crosswalk / Driveway Crossing',
