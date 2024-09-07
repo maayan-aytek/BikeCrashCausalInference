@@ -75,15 +75,9 @@ def features_engineer(data_path: str, winter_filter=False) -> pd.DataFrame:
     df['speed_limit'] = df['speed_limit'].apply(lambda x: int(x.split(" ")[0]))
     severity_dict = {"O: No Injury": 0, "C: Possible Injury": 1, "B: Suspected Minor Injury": 2, "A: Suspected Serious Injury": 3, "K: Killed": 4}
     df['severity'] = df['severity'].replace(severity_dict)
-    month_mapping = {
-    'January': 1, 'February': 2, 'March': 3, 'April': 4,
-    'May': 5, 'June': 6, 'July': 7, 'August': 8,
-    'September': 9, 'October': 10, 'November': 11, 'December': 12
-    }
-    df['month'] = df['month'].replace(month_mapping)
     if winter_filter:
-        df = df[df['month'].isin([11, 12, 1, 2])]
+        df = df[df['month'].isin(['November', 'December', 'January', 'February'])]
     df = df.drop(['road_condition', 'gender'], axis=1)
-    category_cols = ['biker_location', 'intersection_type', 'vehicle_type', 'light_condition', 'locality', 'road_surface_type', 'weather']
+    category_cols = ['biker_location', 'intersection_type', 'vehicle_type', 'light_condition', 'locality', 'road_surface_type', 'weather', 'month']
     df = pd.get_dummies(df, columns=category_cols)
     return df 
