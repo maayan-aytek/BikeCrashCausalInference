@@ -104,3 +104,27 @@ def plot_evaluation_metrics(models_dict, t_true):
                     ha = 'center', va = 'center', 
                     xytext = (0, 9), textcoords = 'offset points')
     plt.show()
+
+
+def plot_learners_evaluation_metrics(models_eval_dict):
+    scores = []
+    for model_name, eval_dict in models_eval_dict.items():
+        scores.append((model_name, 'Accuracy', eval_dict['accuracy']))
+        scores.append((model_name, 'F1', eval_dict['f1']))
+    
+    # Convert to a DataFrame for easier plotting
+    scores_df = pd.DataFrame(scores, columns=['Model', 'Metric', 'Score'])
+    plt.figure(figsize=(10, 6))
+    ax = sns.barplot(x='Metric', y='Score', hue='Model', data=scores_df)
+    plt.title('Model Evaluation Metrics')
+    plt.ylabel('Score')
+    plt.xlabel('Metric')
+    plt.legend(title='Model')
+    
+    # Add labels above the bars
+    for p in ax.patches[:-3]:
+        ax.annotate(format(p.get_height(), '.2f'),
+                    (p.get_x() + p.get_width() / 2., p.get_height()),
+                    ha = 'center', va = 'center', 
+                    xytext = (0, 9), textcoords = 'offset points')
+    plt.show()

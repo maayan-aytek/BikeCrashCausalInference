@@ -73,7 +73,7 @@ def features_engineer(data_path: str, winter_filter=False) -> pd.DataFrame:
     df['is_male'] = df['gender'].apply(lambda x: 1 if x == 'Male' else 0)
     df['age_category'] = df['age_category'].apply(lambda x: int(x.split("-")[0]) if "-" in x else int(x.split("+")[0]))
     df['speed_limit'] = df['speed_limit'].apply(lambda x: int(x.split(" ")[0]))
-    severity_dict = {"O: No Injury": 0, "C: Possible Injury": 1, "B: Suspected Minor Injury": 2, "A: Suspected Serious Injury": 3, "K: Killed": 4}
+    severity_dict = {"O: No Injury": 0, "C: Possible Injury": 0.25, "B: Suspected Minor Injury": 0.5, "A: Suspected Serious Injury": 0.75, "K: Killed": 1}
     df['severity'] = df['severity'].replace(severity_dict)
     if winter_filter:
         df = df[df['month'].isin(['November', 'December', 'January', 'February'])]

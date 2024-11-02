@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from constants import T_BINARY, Y
+from figures import plot_evaluation_metrics
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, f1_score
-import numpy as np
 from sklearn.metrics import cohen_kappa_score
 
 
@@ -112,47 +112,91 @@ def calc_matching_ate(propensity_df):
 
 
 def calculate_s_learner_score(X, T, Y, model, scale=False):
-  if scale:
-    scaler = MinMaxScaler()
-    X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
-  else:
-    X_scaled = X
-  X_with_T = pd.concat([X_scaled, T], axis=1)
+    if scale:
+      scaler = MinMaxScaler()
+      X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+    else:
+      X_scaled = X
+    X_with_T = pd.concat([X_scaled, T], axis=1)
+    Y_str = Y.astype(str)
+    model.fit(X_with_T, Y_str)
 
-  model.fit(X_with_T, Y)
+    X_t1 = X_with_T.copy()
+    X_t1[T_BINARY] = 1
 
-  X_t1 = X_with_T.copy()
-  X_t1[T_BINARY] = 1
+    X_t0 = X_with_T.copy()
+    X_t0[T_BINARY] = 0
 
-  X_t0 = X_with_T.copy()
-  X_t0[T_BINARY] = 0
+    t1_y_preds = np.array(model.predict(X_t1).astype(float))
+    t0_y_preds = np.array(model.predict(X_t0).astype(float))
 
-  t1_y_preds = np.array(model.predict(X_t1))
-  t0_y_preds = np.array(model.predict(X_t0))
-
-  return (t1_y_preds - t0_y_preds).sum() / len(t1_y_preds)
+    return (t1_y_preds - t0_y_preds).sum() / len(t1_y_preds)
 
 
 def calculate_t_learner_score(X, T, Y, model0, model1, scale=False):
-  if scale:
-    scaler = MinMaxScaler()
-    X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
-  else:
-    X_scaled = X
+    if scale:
+      scaler = MinMaxScaler()
+      X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+    else:
+      X_scaled = X
 
-  X_t1 = X_scaled[T == 1]
-  Y_t1 = Y[T == 1]
+    Y_str = Y.astype(str)
+    X_t1 = X_scaled[T == 1]
+    Y_t1 = Y_str[T == 1]
 
-  X_t0 = X_scaled[T == 0]
-  Y_t0 = Y[T == 0]
+    X_t0 = X_scaled[T == 0]
+    Y_t0 = Y_str[T == 0]
 
-  model1.fit(X_t1, Y_t1)
-  model0.fit(X_t0, Y_t0)
+    model1.fit(X_t1, Y_t1)
+    model0.fit(X_t0, Y_t0)
 
-  t1_y_preds = np.array(model1.predict(X_scaled))
-  t0_y_preds = np.array(model0.predict(X_scaled))
+    t1_y_preds = np.array(model1.predict(X_scaled).astype(float))
+    t0_y_preds = np.array(model0.predict(X_scaled).astype(float))
 
-  return (t1_y_preds - t0_y_preds).sum() / len(t1_y_preds)
+    return (t1_y_preds - t0_y_preds).sum() / len(t1_y_preds)
+
+
+def DR_ATE(X, Y, T, model0, model1, propensity_score, scale=False):
+    if scale:
+        scaler = MinMaxScaler()
+        X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+    else:
+        X_scaled = X
+
+    Y_str = Y.astype(str)
+    X_t1 = X_scaled[T == 1]
+    Y_t1 = Y_str[T == 1]
+
+    X_t0 = X_scaled[T == 0]
+    Y_t0 = Y_str[T == 0]
+
+    model1.fit(X_t1, Y_t1)
+    model0.fit(X_t0, Y_t0)
+
+    t1_y_preds = np.array(model1.predict(X_scaled).astype(float))
+    t0_y_preds = np.array(model0.predict(X_scaled).astype(float))
+
+    g1 = t1_y_preds + (T / propensity_score)*(Y - t1_y_preds)
+    g0 = t0_y_preds + ((1 - T) / (1 - propensity_score))*(Y - t0_y_preds)
+    return (g1 - g0).mean()
+
+
+def eval_learner_models(X, T, Y, model, scale=False):
+    if scale:
+        scaler = MinMaxScaler()
+        X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+    else:
+        X_scaled = X
+
+    X_with_T = pd.concat([X_scaled, T.reset_index(drop=True)], axis=1)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_with_T, Y, test_size=0.2, random_state=42)
+
+    Y_train_str = Y_train.astype(str)
+    Y_test_str = Y_test.astype(str)
+    model.fit(X_train, Y_train_str)
+    Y_pred = model.predict(X_test)
+
+    return {'accuracy': accuracy_score(Y_test_str, Y_pred), 'f1': f1_score(Y_test_str, Y_pred, average='weighted')}
 
 
 def estimate_learners_methods(df, features, model_name, learners_model_class, scale=False):
@@ -164,7 +208,6 @@ def estimate_learners_methods(df, features, model_name, learners_model_class, sc
                                     "T learner": [t_learner]
                                     })
     return estimation_df
-
 
 
 def estimate_propensity_methods(df, propensity_model_name, scale=False):
@@ -236,5 +279,26 @@ def eval_target_model(df, features, model_class, scale=False):
     print(f"F1: {f1}")
 
     return f1, grid_search.best_params_
+
+
+def eval_propensity_models(df, models_dict, features, scale=False):
+    df_copy = df.copy()
+    X_df = df_copy[features]
+    t_true = df_copy[T_BINARY]
+
+    if scale:
+        scaler = MinMaxScaler()
+        X_scaled = scaler.fit_transform(X_df)
+    else:
+        X_scaled = X_df
+    X_train, X_test, Y_train, Y_test = train_test_split(X_scaled, t_true, test_size=0.2, random_state=42)
+    propensities_dict = {}
+    for model_name, model in models_dict.items():
+        df_copy = X_test.copy()
+        model.fit(X_train.to_numpy(), Y_train)
+        propensity_scores = model.predict_proba(X_test)[:, 1]
+        df_copy['propensity_score'] = propensity_scores
+        propensities_dict[model_name] = df_copy
+    plot_evaluation_metrics(propensities_dict, Y_test)
 
 
